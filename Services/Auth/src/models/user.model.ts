@@ -1,5 +1,16 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+
+
+export interface IAddress {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  _id?: string; // Mongoose adds this automatically
+}
+
 export interface Iuser extends Document {
   username: string;
   email: string;
@@ -11,7 +22,17 @@ export interface Iuser extends Document {
   role: "user" | "seller";
   createdAt: Date;
   updatedAt: Date;
+  addresses: IAddress[];
 }
+
+
+const addressSchema = new mongoose.Schema({
+  street: { type: String, required: true },
+  city: { type: String, required: true },
+  state: { type: String, required: true },
+  zip: { type: String, required: true },
+  country: { type: String, required: true },
+});
 
 const userSchema: Schema = new Schema(
   {
@@ -29,6 +50,7 @@ const userSchema: Schema = new Schema(
       lastName: { type: String, required: true },
     },
     role: { type: String, enum: ["user", "seller"], default: "user" },
+    addresses: [addressSchema],
   },
   { timestamps: true }
 );
