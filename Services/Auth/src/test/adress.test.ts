@@ -98,4 +98,60 @@ describe('Address API', () => {
     expect(deleteRes.body.message).toEqual('Address deleted successfully');
   });
 
+
+
+  // ... existing tests ...
+
+  it('should retrieve all addresses for the current user', async () => {
+    // 1. First, add an address so we have something to fetch
+    await request(app)
+      .post('/api/address')
+      .set('Cookie', token)
+      .send({ 
+        street: 'Get St', 
+        city: 'Fetch City', 
+        state: 'FC', 
+        zip: '12345', 
+        country: 'USA' 
+      });
+
+    // 2. Call the GET API
+    const res = await request(app)
+      .get('/api/address')
+      .set('Cookie', token);
+
+    // 3. Assert
+    expect(res.statusCode).toEqual(200);
+    // Check that we got an array back
+    expect(Array.isArray(res.body.addresses)).toBe(true);
+    // Check that the array contains the address we just added
+    expect(res.body.addresses.length).toBeGreaterThan(0);
+    expect(res.body.addresses[0]).toHaveProperty('city', 'Fetch City');
+  });
+
+  it('should return empty array if user has no addresses', async () => {
+    // 1. Create a NEW user (who has no addresses yet)
+    const freshUser = {
+      username: 'emptyuser',
+      email: 'empty@example.com',
+      password: 'StrongPassword@123',
+      fullname: { firstName: 'No', lastName: 'Address' }
+    };
+
+    await request(app).post('/api/auth/register').send(freshUser);
+    const loginRes = await request(app).post('/api/auth/login').send({
+      email: freshUser.email, password: freshUser.password
+    });
+    const freshToken = loginRes.headers['set-cookie'];
+
+    // 2. Call GET API
+    const res = await request(app)
+      .get('/api/address')
+      .set('Cookie', freshToken);
+
+    // 3. Assert
+    expect(res.statusCode).toEqual(200);
+    expect(res.body.addresses).toEqual([]); // Should be empty
+  });
+
 });

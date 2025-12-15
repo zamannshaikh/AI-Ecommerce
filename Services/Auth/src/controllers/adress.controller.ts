@@ -86,3 +86,26 @@ export const updateAddress = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: "Server error", error });
   }
 };
+
+
+
+// ... existing imports ...
+
+// 4. GET ADDRESSES
+export const getAddresses = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = typeof req.user === 'object' ? req.user?.id : null;
+
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Return the list (it might be empty, which is fine)
+    res.status(200).json({ addresses: user.addresses });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};

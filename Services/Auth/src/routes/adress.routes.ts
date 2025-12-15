@@ -1,5 +1,5 @@
 import express from 'express';
-import { addAddress, deleteAddress, updateAddress } from '../controllers/adress.controller.js';
+import { addAddress, deleteAddress, updateAddress,getAddresses } from '../controllers/adress.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
@@ -8,5 +8,6 @@ const router = express.Router();
 router.post('/', authMiddleware, addAddress);
 router.delete('/:id', authMiddleware, deleteAddress);
 router.put('/:id', authMiddleware, updateAddress);
+router.get('/', authMiddleware, getAddresses);
 
 export default router;
