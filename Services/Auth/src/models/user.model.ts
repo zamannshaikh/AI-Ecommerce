@@ -6,7 +6,7 @@ export interface IAddress {
   street: string;
   city: string;
   state: string;
-  zip: string;
+  pincode: number;
   country: string;
   _id?: string; // Mongoose adds this automatically
 }
@@ -30,7 +30,7 @@ const addressSchema = new mongoose.Schema({
   street: { type: String, required: true },
   city: { type: String, required: true },
   state: { type: String, required: true },
-  zip: { type: String, required: true },
+  pincode: { type: Number, required: true },
   country: { type: String, required: true },
 });
 

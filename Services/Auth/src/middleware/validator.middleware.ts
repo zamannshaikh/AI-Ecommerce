@@ -70,4 +70,29 @@ const validateLogin = [
 ];
 
 
-export {registerUserValidator, validateLogin};
+const addessValidation= [
+    body('street')
+    .isString().withMessage('Street must be a string')
+    .isLength({min:1,max:100}).withMessage('Street must be between 1 and 100 characters'),
+
+    body('city')
+    .isString().withMessage('City must be a string')
+    .isLength({min:1,max:50}).withMessage('City must be between 1 and 50 characters'),
+
+    body('state')
+    .isString().withMessage('State must be a string')
+    .isLength({min:1,max:50}).withMessage('State must be between 1 and 50 characters'),
+
+    body('pincode')
+    .isString().withMessage('Zip must be a string')
+    .isLength({min:1,max:20}).withMessage('Zip must be between 1 and 20 characters'),
+
+    body('country')
+    .isString().withMessage('Country must be a string')
+    .isLength({min:1,max:50}).withMessage('Country must be between 1 and 50 characters'),
+
+    respondWithValidationErrors
+];
+
+
+export {registerUserValidator, validateLogin,addessValidation};

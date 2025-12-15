@@ -5,7 +5,7 @@ import { userModel } from "../models/user.model.js";
 // 1. ADD ADDRESS
 export const addAddress = async (req: AuthRequest, res: Response) => {
   try {
-    const { street, city, state, zip, country } = req.body;
+    const { street, city, state, pincode, country } = req.body;
     
     // We assume req.user is populated by your authMiddleware
     // We verify req.user is an object and has an id
@@ -18,7 +18,7 @@ export const addAddress = async (req: AuthRequest, res: Response) => {
       userId,
       { 
         $push: { 
-          addresses: { street, city, state, zip, country } 
+          addresses: { street, city, state,pincode, country } 
         } 
       },
       { new: true } // Return the updated user object
@@ -61,7 +61,7 @@ export const deleteAddress = async (req: AuthRequest, res: Response) => {
 export const updateAddress = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params; // Address ID to update
-    const { street, city, state, zip, country } = req.body;
+    const { street, city, state, pincode, country } = req.body;
     const userId = typeof req.user === 'object' ? req.user?.id : null;
 
     // Use array filters to update a specific item in the array
@@ -72,7 +72,7 @@ export const updateAddress = async (req: AuthRequest, res: Response) => {
           "addresses.$.street": street,
           "addresses.$.city": city,
           "addresses.$.state": state,
-          "addresses.$.zip": zip,
+          "addresses.$.pincode": pincode,
           "addresses.$.country": country
         } 
       },

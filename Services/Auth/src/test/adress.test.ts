@@ -45,7 +45,7 @@ describe('Address API', () => {
       street: '123 Tech Lane',
       city: 'Code City',
       state: 'TS',
-      zip: '90210',
+      pincode: '90210',
       country: 'USA'
     };
 
@@ -64,7 +64,7 @@ describe('Address API', () => {
     const createRes = await request(app)
       .post('/api/address')
       .set('Cookie', token)
-      .send({ street: 'Old St', city: 'Old', state: 'O', zip: '000', country: 'Old' });
+      .send({ street: 'Old St', city: 'Old', state: 'O', pincode: '000', country: 'Old' });
     
     const addrId = createRes.body.address._id;
 
@@ -73,7 +73,7 @@ describe('Address API', () => {
       .put(`/api/address/${addrId}`)
       .set('Cookie', token)
       .send({ 
-        street: 'New St', city: 'New', state: 'N', zip: '111', country: 'New' 
+        street: 'New St', city: 'New', state: 'N', pincode: '111', country: 'New' 
       });
 
     expect(updateRes.statusCode).toEqual(200);
@@ -85,7 +85,7 @@ describe('Address API', () => {
     const createRes = await request(app)
       .post('/api/address')
       .set('Cookie', token)
-      .send({ street: 'Delete St', city: 'Del', state: 'D', zip: '666', country: 'Del' });
+      .send({ street: 'Delete St', city: 'Del', state: 'D', pincode: '666', country: 'Del' });
 
     const addrId = createRes.body.address._id;
 
@@ -111,7 +111,7 @@ describe('Address API', () => {
         street: 'Get St', 
         city: 'Fetch City', 
         state: 'FC', 
-        zip: '12345', 
+        pincode: '12345', 
         country: 'USA' 
       });
 
