@@ -84,8 +84,8 @@ const addessValidation= [
     .isLength({min:1,max:50}).withMessage('State must be between 1 and 50 characters'),
 
     body('pincode')
-    .isString().withMessage('Zip must be a string')
-    .isLength({min:1,max:20}).withMessage('Zip must be between 1 and 20 characters'),
+    .isNumeric().withMessage('Pincode must be a number')
+    .isLength({min:1,max:20}).withMessage('Pincode must be between 1 and 20 characters'),
 
     body('country')
     .isString().withMessage('Country must be a string')
