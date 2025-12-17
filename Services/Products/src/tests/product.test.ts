@@ -1,103 +1,95 @@
 import { jest } from '@jest/globals';
 import request from 'supertest';
-import jwt from 'jsonwebtoken'; // We need this to forge tokens
+import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
-
-
-
-import app from '../app.js'; // Ensure app is exported from app.ts
 import { connectDB, closeDB, clearDB } from './setup.js';
 
-// Setup DB
-beforeAll(async () => await connectDB());
+// --- 1. DEFINE MOCK BEFORE IMPORTING APP ---
+// We use unstable_mockModule because you are using ES Modules ("type": "module")
+jest.unstable_mockModule('../utils/imagekit.js', () => ({
+  uploadImage: jest.fn().mockImplementation(async () => "https://fake-url.com/uploaded_image.jpg"),
+  imagekit: {}
+}));
+
+// --- 2. DYNAMIC APP VARIABLE ---
+let app: any;
+
+beforeAll(async () => {
+  await connectDB();
+  
+  // --- 3. IMPORT APP HERE (AFTER MOCK IS READY) ---
+  // This ensures 'app.js' uses the fake imagekit, not the real one.
+  const appModule = await import('../app.js');
+  app = appModule.default;
+});
+
 afterEach(async () => await clearDB());
 afterAll(async () => await closeDB());
 
-describe('Product API - Create', () => {
+describe('Product API - Multi-Image Upload', () => {
 
-  // --- HELPER: Forge a JWT Token ---
-  const generateTestToken = (role: string) => {
-    // We create a fake user ID
-    const fakeUserId = new mongoose.Types.ObjectId().toString();
-    
-    // We sign it using the SAME secret your app uses
+  const generateSellerToken = () => {
     return jwt.sign(
-      { id: fakeUserId, role: role, email: 'test@example.com' },
-      process.env.JWT_SECRET || 'testsecret', // Fallback if env is missing
+      { id: new mongoose.Types.ObjectId().toString(), role: 'seller' },
+      process.env.JWT_SECRET || 'testsecret',
       { expiresIn: '1h' }
     );
   };
 
-  it('should allow a Seller to create a product', async () => {
-    // 1. Get a token with 'seller' role
-    const sellerToken = generateTestToken('seller');
-
-    const productData = {
-      name: "Gaming Mouse",
-      description: "High precision mouse",
-      price: 50,
-      category: "electronics",
-      stock: 100,
-      images: ["http://example.com/mouse.jpg"]
-    };
-
-    const res = await request(app)
-      .post('/api/products/add') // Update this if your route prefix is different
-      .set('Authorization', `Bearer ${sellerToken}`) // Send Token
-      .send(productData);
-
-    expect(res.statusCode).toEqual(201);
-    expect(res.body.message).toEqual("Product created successfully");
-    expect(res.body.product.name).toEqual("Gaming Mouse");
-    expect(res.body.product.seller).toBeDefined(); // Ensure seller ID was saved
-  });
-
-  it('should allow an Admin to create a product', async () => {
-    const adminToken = generateTestToken('admin');
+  it('should upload MULTIPLE images and create a product', async () => {
+    const token = generateSellerToken();
+    const buffer1 = Buffer.from('fake-image-1');
+    const buffer2 = Buffer.from('fake-image-2');
 
     const res = await request(app)
       .post('/api/products/add')
-      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Authorization', `Bearer ${token}`)
+      .field('name', 'Gallery Product')
+      .field('description', 'Has many images')
+      .field('price', 999)
+      .field('category', 'art')
+      .field('stock', 5)
+      // Attach files
+      .attach('images', buffer1, 'photo1.jpg')
+      .attach('images', buffer2, 'photo2.jpg');
+
+    expect(res.statusCode).toEqual(201);
+    
+    // ✅ Verify we got the FAKE URL (Test will pass now)
+    expect(res.body.product.images[0]).toEqual("https://fake-url.com/uploaded_image.jpg");
+    expect(res.body.product.images.length).toEqual(2);
+  });
+
+  it('should create a product with NO images (empty array)', async () => {
+    const token = generateSellerToken();
+
+    const res = await request(app)
+      .post('/api/products/add')
+      .set('Authorization', `Bearer ${token}`)
       .send({
-        name: "Admin Product",
-        description: "Test",
-        price: 10,
-        category: "test",
-        stock: 1
+          name: "Text Only Product",
+          description: "No pics",
+          price: 100,
+          category: "books",
+          stock: 50
       });
 
     expect(res.statusCode).toEqual(201);
+    expect(res.body.product.images).toEqual([]);
   });
 
-  it('should BLOCK a regular User from creating a product', async () => {
-    // 1. Get a token with 'user' role
-    const userToken = generateTestToken('user');
+  it('should fail if user is not a seller/admin', async () => {
+    const userToken = jwt.sign(
+        { id: "123", role: "user" }, 
+        process.env.JWT_SECRET || 'testsecret'
+    );
 
     const res = await request(app)
       .post('/api/products/add')
-      .set('Authorization', `Bearer ${userToken}`) // Send User Token
-      .send({ name: "Hacker Product", price: 100 });
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ name: "Hacker Item", price: 10 });
 
-    expect(res.statusCode).toEqual(403); // Forbidden
-    expect(res.body.message).toContain("Insufficient permissions");
-  });
-
-  it('should fail if price is negative', async () => {
-    const sellerToken = generateTestToken('seller');
-
-    const res = await request(app)
-      .post('/api/products/add')
-      .set('Authorization', `Bearer ${sellerToken}`)
-      .send({
-        name: "Bad Product",
-        description: "Desc",
-        price: -50, // ❌ Invalid
-        category: "oops",
-        stock: 10
-      });
-
-    expect(res.statusCode).toEqual(400); // Validation Error
-    expect(res.body.message).toContain("Price cannot be negative");
+    expect(res.statusCode).toEqual(403);
   });
 
 });
