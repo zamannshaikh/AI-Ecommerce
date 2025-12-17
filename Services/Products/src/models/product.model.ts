@@ -13,6 +13,7 @@ export interface IProduct extends Document {
   updatedAt: Date;
 }
 
+
 // 2. The Schema (Database Rules)
 const productSchema = new Schema<IProduct>(
   {
@@ -55,6 +56,7 @@ const productSchema = new Schema<IProduct>(
     timestamps: true // Automatically manages createdAt and updatedAt
   }
 );
+productSchema.index({ name: 'text', description: 'text' });
 
 // 3. The Model
 export const productModel = mongoose.model<IProduct>("Product", productSchema);

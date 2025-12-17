@@ -49,3 +49,64 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ message: "Server error", error });
     }
 };
+
+
+
+
+export const getProducts = async (req: AuthRequest, res: Response) => {
+    try {
+        const { q, minprice, maxprice,  limit = 10,page=1, category } = req.query;
+
+        const filter: any = {};
+
+        // 1. Text Search
+        if (q) {
+            filter.$text = { $search: q as string };
+        }
+
+        // 2. Category Filter
+        if (category) {
+            filter.category = category;
+        }
+
+        // 3. Price Filter (Fix: Use 'price', not 'price.amount')
+        if (minprice || maxprice) {
+            filter.price = {};
+            if (minprice) filter.price.$gte = Number(minprice);
+            if (maxprice) filter.price.$lte = Number(maxprice);
+        }
+        const pageNumber = Number(page);
+        const limitNumber = Number(limit);
+        const skip = (pageNumber - 1) * limitNumber;
+        // 4. Build Query with Sorting
+        // If searching, sort by Relevance. Otherwise, sort by Newest.
+        let query = productModel.find(filter)
+            .skip(Number(skip))
+            .limit(Math.min(Number(limit), 50)); // Cap limit at 50 for safety
+
+        if (q) {
+            query = query.sort({ score: { $meta: "textScore" } });
+        } else {
+            query = query.sort({ createdAt: -1 });
+        }
+
+        // 5. Execute Query & Count Total (Parallel for speed)
+        const [products, total] = await Promise.all([
+            query,
+            productModel.countDocuments(filter)
+        ]);
+
+        return res.status(200).json({
+            message: "Success",
+            data: products,
+            pagination: {
+                total,
+                skip: Number(skip),
+                limit: Number(limit)
+            }
+        });
+
+    } catch (error: any) {
+        return res.status(500).json({ message: "Server Error", error: error.message });
+    }
+}
