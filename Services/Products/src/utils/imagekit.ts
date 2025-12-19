@@ -11,11 +11,10 @@ export const imagekit = new ImageKit({
 // 2. Helper function to upload file
 export const uploadImage = async (file: Express.Multer.File): Promise<string> => {
     try {
-        // Convert Buffer to Base64
-        const fileBase64 = file.buffer.toString("base64");
+        
         
         const result = await imagekit.upload({
-            file: fileBase64, // required
+            file: file.buffer, // required
             fileName: `${uuidv4()}_${file.originalname}`, // unique file name
             folder: "/products" // optional: organize your images
         });
