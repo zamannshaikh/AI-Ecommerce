@@ -110,3 +110,125 @@ export const getProducts = async (req: AuthRequest, res: Response) => {
         return res.status(500).json({ message: "Server Error", error: error.message });
     }
 }
+
+
+
+export const getProductById = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid product ID" });
+        }
+
+        const product = await productModel.findById(id);
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        return res.status(200).json({
+            message: "Success",
+            Product: product
+        });
+
+    } catch (error: any) {
+        return res.status(500).json({ message: "Server Error", error: error.message });
+    }
+}
+
+
+
+
+
+
+
+export const updateProduct = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = (req.user as any)?.id;
+
+        // A. Validation
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid product ID" });
+        }
+
+        const product = await productModel.findById(id);
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        // B. Authorization Check (Only the Owner or Admin can update)
+        if (product.seller.toString() !== userId && (req.user as any).role !== 'admin') {
+            return res.status(403).json({ message: "Not authorized to update this product" });
+        }
+
+        // C. Handle New Images (if any)
+        let updatedImages = [...product.images]; // Start with existing images
+
+        // If user uploaded NEW files, we upload them to ImageKit
+        const imageFiles = req.files as Express.Multer.File[];
+        if (imageFiles && imageFiles.length > 0) {
+            const newImageUrls = await Promise.all(
+                imageFiles.map(file => uploadImage(file))
+            );
+            // Strategy: Append new images to the list
+            // (Note: If you want to REPLACE all images, just use: updatedImages = newImageUrls)
+            updatedImages = [...updatedImages, ...newImageUrls];
+        }
+
+        // D. Update Fields
+        // We only update fields that are actually sent in the body
+        const { name, description, price, category, stock } = req.body;
+
+        product.name = name || product.name;
+        product.description = description || product.description;
+        product.price = price || product.price;
+        product.category = category || product.category;
+        product.stock = stock || product.stock;
+        product.images = updatedImages; // Save the merged image list
+
+        const updatedProduct = await product.save();
+
+        res.status(200).json({
+            message: "Product updated successfully",
+            product: updatedProduct
+        });
+
+    } catch (error: any) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+
+export const deleteProduct = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = (req.user as any)?.id;
+
+        // A. Validation
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid product ID" });
+        }
+
+        const product = await productModel.findById(id);
+
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        // B. Authorization Check (Only the Owner or Admin can delete)
+        if (product.seller.toString() !== userId && (req.user as any).role !== 'admin') {
+            return res.status(403).json({ message: "Not authorized to delete this product" });
+        }
+
+        // C. Delete Product
+        await productModel.findByIdAndDelete(id);
+
+        res.status(200).json({ message: "Product deleted successfully" });
+
+    } catch (error: any) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }   
+}

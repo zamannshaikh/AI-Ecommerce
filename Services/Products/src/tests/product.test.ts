@@ -242,3 +242,200 @@ describe('Product API - Get All (Filters & Search)', () => {
     });
 
 });
+
+
+
+
+
+
+
+describe('Product API - Get Single Product', () => {
+    let testProductId: string;
+
+    // Create a product to fetch
+    beforeEach(async () => {
+      const sellerId = new mongoose.Types.ObjectId();
+      const product:any = await productModel.create({
+        name: "Test Fetch Item",
+        description: "Testing ID fetch",
+        price: 50,
+        category: "test",
+        stock: 10,
+        seller: sellerId
+      } as any);
+      testProductId = product._id.toString();
+    });
+
+    it('should return a product by VALID ID', async () => {
+      const res = await request(app).get(`/api/products/${testProductId}`);
+      
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.Product.name).toEqual("Test Fetch Item");
+      expect(res.body.Product._id).toEqual(testProductId);
+    });
+
+    it('should return 404 for NON-EXISTENT ID', async () => {
+      // Generate a valid MongoID that simply doesn't exist in DB
+      const fakeId = new mongoose.Types.ObjectId();
+      const res = await request(app).get(`/api/products/${fakeId}`);
+      
+      expect(res.statusCode).toEqual(404);
+      expect(res.body.message).toEqual("Product not found");
+    });
+
+    it('should return 400 for INVALID ID format', async () => {
+      // "123" is not a valid MongoDB ObjectId
+      const res = await request(app).get('/api/products/123-invalid-id');
+      
+      expect(res.statusCode).toEqual(400);
+      expect(res.body.message).toEqual("Invalid product ID");
+    });
+  });
+
+
+
+
+describe('Product API - Update Product', () => {
+    let productId: string;
+    let sellerToken: string;
+    let otherUserToken: string;
+
+    // Setup: Create 1 product and 2 users (Owner and Stranger)
+    beforeEach(async () => {
+      const sellerId = new mongoose.Types.ObjectId();
+      
+      // 1. Create Product
+      const product: any = await productModel.create({
+        name: "Old Name",
+        description: "Old Desc",
+        price: 10,
+        category: "old",
+        stock: 5,
+        seller: sellerId,
+        images: ["old-image.jpg"]
+      } as any);
+      productId = product._id.toString();
+
+      // 2. Create Tokens
+      sellerToken = jwt.sign(
+         { id: sellerId.toString(), role: 'seller' }, 
+         process.env.JWT_SECRET || 'testsecret'
+      );
+      
+      otherUserToken = jwt.sign(
+         { id: new mongoose.Types.ObjectId().toString(), role: 'seller' }, 
+         process.env.JWT_SECRET || 'testsecret'
+      );
+    });
+
+    it('should UPDATE product details (Name & Price)', async () => {
+      const res = await request(app)
+        .put(`/api/products/${productId}`)
+        .set('Authorization', `Bearer ${sellerToken}`)
+        .send({
+            name: "New Name Updated",
+            price: 100
+        });
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.product.name).toEqual("New Name Updated");
+      expect(res.body.product.price).toEqual(100);
+      expect(res.body.product.description).toEqual("Old Desc"); // Should stay same
+    });
+
+    it('should ADD new images while keeping old ones', async () => {
+      const buffer = Buffer.from('new-image-content');
+
+      const res = await request(app)
+        .put(`/api/products/${productId}`)
+        .set('Authorization', `Bearer ${sellerToken}`)
+        .attach('images', buffer, 'new.jpg');
+
+      expect(res.statusCode).toEqual(200);
+      // Logic: 1 Old Image + 1 New Image = 2 Images
+      expect(res.body.product.images.length).toEqual(2);
+      expect(res.body.product.images).toContain("old-image.jpg");
+    });
+
+    it('should FAIL if user is not the owner', async () => {
+      const res = await request(app)
+        .put(`/api/products/${productId}`)
+        .set('Authorization', `Bearer ${otherUserToken}`) // Different user
+        .send({ price: 0 });
+
+      expect(res.statusCode).toEqual(403); // Forbidden
+      expect(res.body.message).toEqual("Not authorized to update this product");
+    });
+  });
+
+
+
+
+describe('Product API - Delete Product', () => {
+    let productId: string;
+    let sellerToken: string;
+    let otherUserToken: string;
+
+    beforeEach(async () => {
+      const sellerId = new mongoose.Types.ObjectId();
+      
+      // 1. Create a Product to delete
+      const product: any = await productModel.create({
+        name: "Item to Delete",
+        description: "Will be removed",
+        price: 10,
+        category: "misc",
+        stock: 5,
+        seller: sellerId
+      } as any);
+      productId = product._id.toString();
+
+      // 2. Create Owner Token
+      sellerToken = jwt.sign(
+         { id: sellerId.toString(), role: 'seller' }, 
+         process.env.JWT_SECRET || 'testsecret'
+      );
+      
+      // 3. Create Stranger Token
+      otherUserToken = jwt.sign(
+         { id: new mongoose.Types.ObjectId().toString(), role: 'seller' }, 
+         process.env.JWT_SECRET || 'testsecret'
+      );
+    });
+
+    it('should successfully DELETE a product (Owner)', async () => {
+      const res = await request(app)
+        .delete(`/api/products/${productId}`)
+        .set('Authorization', `Bearer ${sellerToken}`);
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.message).toEqual("Product deleted successfully");
+
+      // Verify it is actually gone from DB
+      const checkDB = await productModel.findById(productId);
+      expect(checkDB).toBeNull();
+    });
+
+    it('should FAIL if user is not the owner', async () => {
+      const res = await request(app)
+        .delete(`/api/products/${productId}`)
+        .set('Authorization', `Bearer ${otherUserToken}`);
+
+      expect(res.statusCode).toEqual(403);
+      expect(res.body.message).toEqual("Not authorized to delete this product");
+
+      // Verify it is STILL in DB
+      const checkDB = await productModel.findById(productId);
+      expect(checkDB).not.toBeNull();
+    });
+
+    it('should return 404 if product does not exist', async () => {
+      const fakeId = new mongoose.Types.ObjectId();
+      const res = await request(app)
+        .delete(`/api/products/${fakeId}`)
+        .set('Authorization', `Bearer ${sellerToken}`);
+
+      expect(res.statusCode).toEqual(404);
+      expect(res.body.message).toEqual("Product not found");
+    });
+  });
