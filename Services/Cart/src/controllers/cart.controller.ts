@@ -1,4 +1,4 @@
-import redis from "../db/redis.js";
+import {redis} from "../db/redis.js";
 import axios from "axios";
 import { AuthRequest } from "../middlewares/auth.middleware.js";
 import { Response } from "express";

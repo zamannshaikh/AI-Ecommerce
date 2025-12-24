@@ -5,7 +5,8 @@
     "module": "nodenext",
     "allowSyntheticDefaultImports": true,          // Required for your "type": "module" setup
     "moduleResolution": "nodenext",
-    "outDir": "./dist",             // Saves compiled files to 'dist' folder
+    "outDir": "./dist",  
+    "isolatedModules": true,           // Saves compiled files to 'dist' folder
     
     /* --- IMPORTANT: Allow files outside src --- */
     // "rootDir": "./src",          // DISABLED: Now you can keep server.ts in the root!
