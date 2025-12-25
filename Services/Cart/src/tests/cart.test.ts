@@ -5,6 +5,8 @@ import jwt from 'jsonwebtoken';
 // ------------------------------------------------------------------
 // 1. DEFINE MOCKS
 // ------------------------------------------------------------------
+
+// Mock Redis
 jest.unstable_mockModule('../db/redis.js', () => ({
     redis: {
         get: jest.fn(),
@@ -12,16 +14,17 @@ jest.unstable_mockModule('../db/redis.js', () => ({
     }
 }));
 
+// Mock Axios
 jest.unstable_mockModule('axios', () => ({
     default: {
-        get: jest.fn()
+        get: jest.fn(),
+        post: jest.fn()
     }
 }));
 
 // ------------------------------------------------------------------
-// 2. DYNAMIC IMPORTS WITH TYPE CASTING (Fixes TS Errors)
+// 2. DYNAMIC IMPORTS
 // ------------------------------------------------------------------
-// We treat these as 'any' to stop TypeScript from complaining about missing properties.
 const redisModule = await import('../db/redis.js') as any;
 const redis = redisModule.redis;
 
@@ -44,7 +47,18 @@ describe('Cart Service APIs', () => {
     });
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        // 1. Clear history and implementations
+        jest.resetAllMocks();
+
+        // 2. RESTORE DEFAULT IMPLEMENTATIONS (Crucial Step!)
+        
+        // Redis Defaults: get returns null (empty), set returns "OK"
+        (redis.get as jest.Mock<any>).mockResolvedValue(null);
+        (redis.set as jest.Mock<any>).mockResolvedValue("OK");
+
+        // Axios Defaults: returns 200 OK to prevent crashes
+        (axios.get as jest.Mock<any>).mockResolvedValue({ status: 200, data: {} });
+        (axios.post as jest.Mock<any>).mockResolvedValue({ status: 200, data: {} });
     });
 
     // ==================================================================
@@ -52,11 +66,10 @@ describe('Cart Service APIs', () => {
     // ==================================================================
     describe('GET /api/cart', () => {
         it('should return an EMPTY cart if Redis is null', async () => {
-            // FIX: Cast to jest.Mock so we can use .mockResolvedValue
             (redis.get as jest.Mock<any>).mockResolvedValue(null);
 
             const res = await request(app)
-                .get('/api/cart/')
+                .get('/api/cart')
                 .set('Cookie', [`token=${userToken}`]);
 
             expect(res.statusCode).toEqual(200);
@@ -71,7 +84,7 @@ describe('Cart Service APIs', () => {
             (redis.get as jest.Mock<any>).mockResolvedValue(JSON.stringify(mockCart));
 
             const res = await request(app)
-                .get('/api/cart/')
+                .get('/api/cart')
                 .set('Cookie', [`token=${userToken}`]);
 
             expect(res.statusCode).toEqual(200);
@@ -86,10 +99,16 @@ describe('Cart Service APIs', () => {
         it('should fetch product details via Axios and add to cart', async () => {
             (redis.get as jest.Mock<any>).mockResolvedValue(null);
             
-            // FIX: Cast axios.get to jest.Mock
+            // Mock Axios to return the Product
             (axios.get as jest.Mock<any>).mockResolvedValue({
+                status: 200,
                 data: {
-                    product: { _id: productId, name: "New Phone", price: 500, images: ["img.jpg"] }
+                    product: { 
+                        _id: productId, 
+                        name: "New Phone", 
+                        price: 500, 
+                        images: ["img.jpg"] 
+                    }
                 }
             });
 
@@ -98,6 +117,9 @@ describe('Cart Service APIs', () => {
                 .set('Cookie', [`token=${userToken}`])
                 .send({ productId, quantity: 1 });
 
+            // Debug log if it fails
+            if (res.statusCode !== 200) console.log("POST Error:", res.body);
+
             expect(res.statusCode).toEqual(200);
             expect(axios.get).toHaveBeenCalled();
             expect(redis.set).toHaveBeenCalled();
@@ -105,7 +127,7 @@ describe('Cart Service APIs', () => {
     });
 
     // ==================================================================
-    // TEST 3: UPDATE QUANTITY
+    // TEST 3: UPDATE QUANTITY (PUT /item)
     // ==================================================================
     describe('PUT /api/cart/item', () => {
         it('should update quantity and recalculate total', async () => {
@@ -113,6 +135,8 @@ describe('Cart Service APIs', () => {
                 items: [{ productId, name: "Test Item", price: 100, quantity: 1 }],
                 totalPrice: 100
             };
+            
+            // Ensure Redis returns this cart
             (redis.get as jest.Mock<any>).mockResolvedValue(JSON.stringify(initialCart));
 
             const res = await request(app)
@@ -120,13 +144,15 @@ describe('Cart Service APIs', () => {
                 .set('Cookie', [`token=${userToken}`])
                 .send({ productId, quantity: 3 });
 
+            if (res.statusCode !== 200) console.log("PUT Error:", res.body);
+
             expect(res.statusCode).toEqual(200);
             expect(res.body.cart.totalPrice).toEqual(300);
         });
     });
 
     // ==================================================================
-    // TEST 4: REMOVE ITEM
+    // TEST 4: REMOVE ITEM (DELETE /item)
     // ==================================================================
     describe('DELETE /api/cart/item/:id', () => {
         it('should remove the specific item', async () => {
@@ -142,6 +168,8 @@ describe('Cart Service APIs', () => {
             const res = await request(app)
                 .delete(`/api/cart/item/prod_2`)
                 .set('Cookie', [`token=${userToken}`]);
+
+            if (res.statusCode !== 200) console.log("DELETE Error:", res.body);
 
             expect(res.statusCode).toEqual(200);
             expect(res.body.cart.items.length).toEqual(1);
