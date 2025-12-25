@@ -8,7 +8,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         const userId = (req.user as any).id; 
         const { items, shippingAddress } = req.body;
         const productServiceUrl = process.env.PRODUCT_SERVICE_URL || 'http://localhost:3001';
-
+        console.log(productServiceUrl);
         let totalAmount = 0;
         const finalOrderItems = [];
 
@@ -18,7 +18,10 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
             try {
                 // Call Product Service
                 const productRes = await axios.get(`${productServiceUrl}/api/products/${item.productId}`);
-                const product = productRes.data.product;
+                console.log("Product Service Response:", productRes.data);
+                const product = productRes.data.Product;
+                console.log("Fetched Product:", product);
+                console.log("Product id from request:", item.productId);
 
                 if (!product) {
                     return res.status(404).json({ message: `Product ${item.productId} not found` });
@@ -30,7 +33,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
                 // 2. Build the Safe Order Item (Using Server Price)
                 finalOrderItems.push({
-                    productId: product.id,
+                    productId: item.productId,
                     name: product.name,
                     image: product.images[0], // Assuming images array
                     price: product.price,     // SECURITY: Use DB price, not Request price
@@ -43,7 +46,10 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
                 return res.status(500).json({ message: "Error contacting Product Service" });
             }
         }
-
+        console.log("----- DEBUGGING ORDER -----");
+console.log("1. Item from Request:", items[0]);
+console.log("2. Product from Service:", finalOrderItems[0]); 
+console.log("---------------------------");
         // 3. Create Order in DB
         const newOrder = await orderModel.create({
             userId,
