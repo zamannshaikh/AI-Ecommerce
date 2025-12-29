@@ -114,3 +114,69 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ message: "Server Error", error: error.message });
     }
 };
+
+
+
+
+// ... existing imports
+
+// 3. Cancel Order (User Action)
+export const cancelOrder = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = (req.user as any).id;
+        const { id } = req.params;
+
+        const order = await orderModel.findById(id);
+
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        // Security: Ensure ownership
+        if (order.userId.toString() !== userId) {
+            return res.status(403).json({ message: "Not authorized" });
+        }
+
+        // Logic: Can only cancel if currently 'pending'
+        if (order.status !== 'pending') {
+            return res.status(400).json({ message: "Cannot cancel order that is already processed" });
+        }
+
+        order.status = 'cancelled';
+        await order.save();
+
+        res.status(200).json({ message: "Order cancelled successfully", order });
+
+    } catch (error: any) {
+        res.status(500).json({ message: "Server Error", error: error.message });
+    }
+};
+
+// 4. Update Order Status (Admin Action)
+export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        // Validate Status
+        const validStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ message: "Invalid status value" });
+        }
+
+        const order = await orderModel.findByIdAndUpdate(
+            id, 
+            { status }, 
+            { new: true } // Return the updated document
+        );
+
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        res.status(200).json({ message: "Order status updated", order });
+
+    } catch (error: any) {
+        res.status(500).json({ message: "Server Error", error: error.message });
+    }
+};
