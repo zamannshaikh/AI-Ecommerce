@@ -69,3 +69,48 @@ console.log("---------------------------");
         res.status(500).json({ message: "Server Error", error: error.message });
     }
 };
+
+
+
+
+
+//  Get All Orders for Logged-In User
+export const getMyOrders = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = (req.user as any).id; // Safe type casting
+
+        // Find orders belonging to this user, sort by newest first
+        const orders = await orderModel.find({ userId }).sort({ createdAt: -1 });
+
+        res.status(200).json({ 
+            message: "User orders fetched", 
+            count: orders.length,
+            orders 
+        });
+    } catch (error: any) {
+        res.status(500).json({ message: "Server Error", error: error.message });
+    }
+};
+
+//  Get Single Order by ID
+export const getOrderById = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = (req.user as any).id;
+        const { id } = req.params;
+
+        const order = await orderModel.findById(id);
+
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        
+        if (order.userId.toString() !== userId) {
+            return res.status(403).json({ message: "Not authorized to view this order" });
+        }
+
+        res.status(200).json({ order });
+    } catch (error: any) {
+        res.status(500).json({ message: "Server Error", error: error.message });
+    }
+};
