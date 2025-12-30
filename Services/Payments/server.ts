@@ -1,4 +1,7 @@
 import app from "./src/app";
+import { connectDB } from "./src/db/db";
+
+connectDB();
 
 
 
