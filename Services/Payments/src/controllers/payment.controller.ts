@@ -5,10 +5,18 @@ import axios from 'axios';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { validatePaymentVerification } from 'razorpay/dist/utils/razorpay-utils';
 
+import crypto from 'crypto';
+
 
 export const createPayment = async (req: AuthRequest, res: Response) => {
     
     const token = req.cookies?.token || req.headers?.authorization?.split(' ')[1];
+
+    console.log("--- DEBUGGING AUTH ---");
+    console.log("1. Cookies:", req.cookies);
+    console.log("2. Headers:", req.headers.authorization);
+    console.log("3. Extracted Token:", token);
+    console.log("----------------------");
 
     try {
         const { orderId } = req.params;
@@ -72,6 +80,21 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
 export const verifyPayment = async (req: AuthRequest, res: Response) => {
     const { razorpayOrderId, paymentId, signature } = req.body;
     const secret = process.env.RAZORPAY_KEY_SECRET || "";
+
+    // --- START DEBUG BLOCK ---
+    const generatedSignature = crypto
+        .createHmac('sha256', secret)
+        .update(razorpayOrderId + "|" + paymentId)
+        .digest('hex');
+
+    console.log("-----------------------------------------");
+    console.log("DEBUG: Verifying Signature");
+    console.log("1. Input String:", razorpayOrderId + "|" + paymentId);
+    console.log("2. Secret Length:", secret.length); // Check if secret is loaded
+    console.log("3. Client Sent:", signature);
+    console.log("4. Server Calculated:", generatedSignature); // <--- COPY THIS!
+    console.log("-----------------------------------------");
+    // --- END DEBUG BLOCK ---
 
     try {
         // 1. Validate Signature using Razorpay Utility
