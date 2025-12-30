@@ -3,6 +3,7 @@ import { razorpay } from '../utils/razarpay';
 import { paymentModel } from '../models/payment.model';
 import axios from 'axios';
 import { AuthRequest } from '../middlewares/auth.middleware';
+import { validatePaymentVerification } from 'razorpay/dist/utils/razorpay-utils';
 
 
 export const createPayment = async (req: AuthRequest, res: Response) => {
@@ -67,4 +68,49 @@ export const createPayment = async (req: AuthRequest, res: Response) => {
     }
 };
 
+
+export const verifyPayment = async (req: AuthRequest, res: Response) => {
+    const { razorpayOrderId, paymentId, signature } = req.body;
+    const secret = process.env.RAZORPAY_KEY_SECRET || "";
+
+    try {
+        // 1. Validate Signature using Razorpay Utility
+        const isValid = validatePaymentVerification(
+            {
+                order_id: razorpayOrderId,
+                payment_id: paymentId
+            },
+            signature,
+            secret
+        );
+
+        if (!isValid) {
+            return res.status(400).json({ message: 'Invalid signature' });
+        }
+
+        // 2. Find Pending Payment
+       
+        const payment = await paymentModel.findOne({ 
+            razorpayOrderId, 
+            status: 'pending' 
+        });
+
+        if (!payment) {
+            return res.status(404).json({ message: 'Payment not found or already processed' });
+        }
+
+        // 3. Update Payment Status
+        payment.razorpayPaymentId = paymentId; // Ensure this matches your Schema field name
+        payment.razorpaySignature = signature;
+        payment.status = 'completed';
+
+        await payment.save();
+
+        return res.status(200).json({ message: 'Payment verified successfully', paymentId });
+
+    } catch (error: any) {
+        console.error("Verification Error:", error);
+        return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    }
+}
 
