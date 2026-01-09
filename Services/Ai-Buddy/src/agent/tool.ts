@@ -18,7 +18,7 @@ export const searchProduct = tool(
     console.log("searchProduct called with:", { query });
 
     try {
-      const response = await axios.get(`${ProductServiceURL}/products?q=${query}`, {
+      const response = await axios.get(`${ProductServiceURL}/api/products?q=${query}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -51,7 +51,7 @@ export const addProductToCart = tool(
 
     try {
       const response = await axios.post(
-        `${CART_SERVICE_URL}/cart/items`,
+        `${CART_SERVICE_URL}/api/cart/add`,
         {
           productId,
           qty,
@@ -92,7 +92,7 @@ export const getCart = tool(
     console.log("getCart called");
 
     try {
-      const response = await axios.get(`${CART_SERVICE_URL}/cart`, {
+      const response = await axios.get(`${CART_SERVICE_URL}/api/cart/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -123,7 +123,7 @@ export const getCart = tool(
 );
 
 
-// --- Tool 4: Remove Item from Cart ---
+
 
 interface RemoveFromCartInput {
   productId: string;
@@ -136,7 +136,7 @@ export const removeCartItem = tool(
 
     try {
       // Assuming your API is DELETE /api/cart/items/:productId
-      await axios.delete(`${CART_SERVICE_URL}/cart/items/${productId}`, {
+      await axios.delete(`${CART_SERVICE_URL}/api/cart/remove/${productId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
