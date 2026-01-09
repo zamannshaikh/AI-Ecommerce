@@ -56,6 +56,7 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
 export const getProducts = async (req: AuthRequest, res: Response) => {
     try {
         const { q, minprice, maxprice,  limit = 10,page=1, category } = req.query;
+        console.log("Query Params:", req.query);
 
         const filter: any = {};
 

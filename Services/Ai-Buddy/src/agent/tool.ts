@@ -16,13 +16,15 @@ interface SearchProductInput {
 export const searchProduct = tool(
   async ({ query, token }: SearchProductInput) => {
     console.log("searchProduct called with:", { query });
+    console.log("Using token:", token);
 
     try {
-      const response = await axios.get(`${ProductServiceURL}/api/products?q=${query}`, {
+      const response = await axios.get(`${ProductServiceURL}/api/products/list?q=${query}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+      console.log("Product search response:", response.data);
 
       return JSON.stringify(response.data);
     } catch (error: any) {
@@ -48,13 +50,14 @@ interface AddToCartInput {
 export const addProductToCart = tool(
   async ({ productId, qty = 1, token }: AddToCartInput) => {
     console.log("addProductToCart called with:", { productId, qty });
+    console.log("Using token:", token);
 
     try {
       const response = await axios.post(
         `${CART_SERVICE_URL}/api/cart/add`,
         {
           productId,
-          qty,
+          quantity: qty,
         },
         {
           headers: {

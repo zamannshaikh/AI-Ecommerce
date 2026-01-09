@@ -62,6 +62,7 @@ async function initSocketServer(httpServer: HttpServer) {
                             }
                         ]
                     },
+                   
                     {
                         // 3. PASS THE TOKEN! This is crucial for your Tools to work.
                         metadata: {
@@ -72,7 +73,7 @@ async function initSocketServer(httpServer: HttpServer) {
 
                 // 4. Extract the final text response
                 const lastMessage = agentResponse.messages[agentResponse.messages.length - 1];
-                
+                console.log("Agent response:", lastMessage);
                 // 5. Send reply back to Frontend
                 socket.emit("message", lastMessage.content);
 

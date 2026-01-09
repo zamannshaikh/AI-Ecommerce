@@ -4,25 +4,22 @@ import { ToolMessage, AIMessage } from "@langchain/core/messages";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { tools } from "./tool"; 
 
-// 1. Initialize Gemini
 const model = new ChatGoogleGenerativeAI({
-  model: "gemini-2.0-flash", // Ensure this model name is correct for your access level
+  model: "gemini-2.5-flash",
   temperature: 0.5,
 });
 
-// 2. Bind tools to the model
-// This tells Gemini: "Here are the functions you can call."
+
 const modelWithTools = model.bindTools(tools);
 
-// --- NODE 1: The Tool Executer ---
-// This runs when Gemini requests a tool call (e.g., "searchProduct")
+
 const toolNode = async (
   state: typeof MessagesAnnotation.State,
   config: RunnableConfig
 ) => {
   const lastMessage = state.messages[state.messages.length - 1];
+  console.log("Tool Node - Last Message:", lastMessage);
 
-  // Safety check: Ensure the last message actually has tool calls
   if (!("tool_calls" in lastMessage) || !Array.isArray(lastMessage.tool_calls)) {
     throw new Error("No tool calls found in the last message.");
   }
@@ -60,7 +57,7 @@ const toolNode = async (
 
       console.log(`Invoking tool: ${call.name} with input:`, toolInput);
 
-      // Inject the token into the tool's input
+      
       const finalInput = { ...toolInput, token: userToken };
 
       try {
@@ -90,6 +87,7 @@ const toolNode = async (
 // This sends the conversation history to Gemini to get a response
 const chatNode = async (state: typeof MessagesAnnotation.State) => {
   const response = await modelWithTools.invoke(state.messages);
+  console.log("AI Response:", response);
 
   // Return the AI's response (which might be text OR a tool call request)
   return { messages: [response] };
@@ -105,6 +103,7 @@ const graph = new StateGraph(MessagesAnnotation)
   // Conditional Edge: Did the AI ask for a tool?
   .addConditionalEdges("agent", (state) => {
     const lastMessage = state.messages[state.messages.length - 1];
+    console.log("Evaluating conditional edge for message:", lastMessage);
 
     // If the AI returned tool_calls, go to the 'tools' node
     if (
@@ -115,7 +114,7 @@ const graph = new StateGraph(MessagesAnnotation)
       return "tools";
     }
 
-    // Otherwise, stop (send reply to user)
+    
     return "__end__";
   })
 
