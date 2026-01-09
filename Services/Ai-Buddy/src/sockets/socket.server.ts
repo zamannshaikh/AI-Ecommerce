@@ -45,7 +45,6 @@ async function initSocketServer(httpServer: HttpServer) {
         
 
         socket.on("disconnect", () => {
-            
         });
     });
 
