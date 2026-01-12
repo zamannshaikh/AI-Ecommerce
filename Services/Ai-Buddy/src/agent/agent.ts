@@ -25,6 +25,15 @@ const toolNode = async (
   }
 
   const toolsCall = lastMessage.tool_calls;
+  const userToken = config.metadata?.token as string;
+
+  console.log("--- DEBUG TOOL NODE ---");
+  console.log("Token in Config:", userToken ? "Found" : "Missing");
+
+  if (!userToken) {
+     console.error("CRITICAL ERROR: No token found in agent config!");
+     // You might want to throw an error here to stop execution
+  }
 
   // Run all requested tools in parallel
   const toolCallResults = await Promise.all(
@@ -41,11 +50,6 @@ const toolNode = async (
       }
 
       const toolInput = call.args;
-
-      // *** THE BRIDGE ***
-      // We extract the user's token from the metadata passed by the Socket Server
-      // config.metadata is strictly typed as Record<string, any>, so we check strictly
-      const userToken = config.metadata?.token as string;
 
       if (!userToken) {
         return new ToolMessage({
@@ -103,7 +107,7 @@ const graph = new StateGraph(MessagesAnnotation)
   // Conditional Edge: Did the AI ask for a tool?
   .addConditionalEdges("agent", (state) => {
     const lastMessage = state.messages[state.messages.length - 1];
-    console.log("Evaluating conditional edge for message:", lastMessage);
+   
 
     // If the AI returned tool_calls, go to the 'tools' node
     if (

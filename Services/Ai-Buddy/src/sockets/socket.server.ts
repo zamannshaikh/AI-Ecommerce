@@ -46,7 +46,7 @@ async function initSocketServer(httpServer: HttpServer) {
         const authSocket = socket as AuthSocket;
         console.log("New client connected:", authSocket.id);
         console.log("User:", authSocket.user);
-
+        console.log("Socket Token:", authSocket.token ? "Present" : "MISSING");
         // Listen for messages from the Frontend
         socket.on("message", async (data: string) => {
             console.log(`Received message from ${authSocket.id}:`, data);

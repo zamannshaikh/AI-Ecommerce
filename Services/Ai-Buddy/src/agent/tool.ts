@@ -5,6 +5,7 @@ import axios from "axios";
 
 const ProductServiceURL = process.env.PRODUCT_SERVICE_URL || "http://localhost:3001";
 const CART_SERVICE_URL = process.env.CART_SERVICE_URL || "http://localhost:3002";
+console.log("cart service url:", CART_SERVICE_URL);
 const ORDER_SERVICE_URL = process.env.ORDER_SERVICE_URL || "http://localhost:3003";
 
 
@@ -36,6 +37,7 @@ export const searchProduct = tool(
     description: "Search for products based on a query (e.g., 'laptop', 'shoes').",
     schema: z.object({
       query: z.string().describe("The search query for products"),
+      token: z.string().optional().describe("Auth token (injected automatically, do not generate)")
      
     }),
   }
@@ -53,6 +55,7 @@ export const addProductToCart = tool(
     console.log("Using token:", token);
 
     try {
+      console.log("Adding product to cart via API:", `${CART_SERVICE_URL}/api/cart/add`);
       const response = await axios.post(
         `${CART_SERVICE_URL}/api/cart/add`,
         {
@@ -68,6 +71,17 @@ export const addProductToCart = tool(
 
       return `Successfully added product ${productId} (Qty: ${qty}) to cart.`;
     } catch (error: any) {
+      // ADD THIS LOGGING BLOCK:
+      console.error("❌ CART TOOL FAILED:");
+      if (axios.isAxiosError(error)) {
+          console.error("Status:", error.response?.status);
+          console.error("Status Text:", error.response?.statusText);
+          console.error("Data:", JSON.stringify(error.response?.data));
+          console.error("URL Tried:", error.config?.url);
+      } else {
+          console.error("Error Message:", error.message);
+      }
+      
       return `Error adding to cart: ${error.message}`;
     }
   },
@@ -80,6 +94,7 @@ export const addProductToCart = tool(
         .number()
         .describe("The quantity of the product to add (default is 1)")
         .default(1),
+        token: z.string().optional().describe("Auth token (injected automatically, do not generate)")
     }),
   }
 );
@@ -120,7 +135,7 @@ export const getCart = tool(
     name: "getCart",
     description: "Retrieve the current items in the user's shopping cart. Use this when the user asks 'what is in my cart' or 'show me my cart'.",
     schema: z.object({
-      // No schema needed, as the AI doesn't provide arguments for this
+      token: z.string().optional().describe("Auth token (injected automatically, do not generate)")
     }),
   }
 );
@@ -155,6 +170,7 @@ export const removeCartItem = tool(
     description: "Remove a specific product from the shopping cart by its Product ID.",
     schema: z.object({
       productId: z.string().describe("The ID of the product to remove"),
+      token: z.string().optional().describe("Auth token (injected automatically, do not generate)")
     }),
   }
 );
