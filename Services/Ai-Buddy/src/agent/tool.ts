@@ -108,6 +108,7 @@ interface GetCartInput {
 export const getCart = tool(
   async ({ token }: GetCartInput) => {
     console.log("getCart called");
+    console.log("Using token:", token);
 
     try {
       const response = await axios.get(`${CART_SERVICE_URL}/api/cart/`, {
@@ -117,15 +118,18 @@ export const getCart = tool(
       });
 
       // Format the output to be AI-friendly
-      const cart = response.data;
-      if (!cart || !cart.items || cart.items.length === 0) {
+      const cartRoot = response.data;
+      console.log("Fetched cart data:", cartRoot);
+      console.log("Cart items:", cartRoot.cart.items);
+      if (!cartRoot || !cartRoot.cart || cartRoot.cart.items.length === 0) {
         return "The cart is empty.";
       }
-
+      const cartItems = cartRoot.cart.items;
+      const total = cartRoot.cart.totalPrice;
       // We return a simplified string so the AI doesn't get overwhelmed by raw JSON
       return JSON.stringify({
-        items: cart.items,
-        totalPrice: cart.totalPrice,
+        items: cartItems,
+        totalPrice: total
       });
     } catch (error: any) {
       return `Error retrieving cart: ${error.message}`;

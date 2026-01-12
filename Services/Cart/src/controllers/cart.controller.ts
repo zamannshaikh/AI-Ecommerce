@@ -59,8 +59,9 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
 
 export const getCart = async (req: AuthRequest, res: Response) => {
     try {
-        const userId = (req.user as any).id;
+        const userId = (req.user as any).id ;
         const cartKey = `cart:${userId}`;
+        console.log("Fetching cart for key:", cartKey);
 
         const cartData = await redis.get(cartKey);
         
