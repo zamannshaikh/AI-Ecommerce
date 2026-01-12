@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    /* --- BASIC SETUP --- */
+    "target": "es2022",             // Modern JavaScript
+    "module": "nodenext",
+    "allowSyntheticDefaultImports": true,          // Required for your "type": "module" setup
+    "moduleResolution": "nodenext",
+    "outDir": "./dist",  
+    "isolatedModules": true,           // Saves compiled files to 'dist' folder
+    
+    /* --- IMPORTANT: Allow files outside src --- */
+    // "rootDir": "./src",          // DISABLED: Now you can keep server.ts in the root!
+
+    /* --- STRICTNESS (Balanced) --- */
+    "strict": true,                 // Keeps standard safety (catches real bugs)
+    "noImplicitAny": true,          // Prevents "any" types which defeat the purpose of TS
+    
+    /* --- DISABLED RESTRICTIONS (To make your life easier) --- */
+    "noUncheckedIndexedAccess": false,   // FIXED: No more "possibly undefined" loops!
+    "exactOptionalPropertyTypes": false, // FIXED: Easier to handle optional fields
+    "verbatimModuleSyntax": false,       // FIXED: You don't HAVE to write "import type" everywhere
+    
+    /* --- COMPATIBILITY --- */
+    "esModuleInterop": true,        // Allows importing CommonJS libs easily
+    "skipLibCheck": true,           // Ignores errors inside library files (saves sanity)
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["**/*"],              // Compile everything
+  "exclude": ["node_modules", "dist"] // Ignore these folders
+}
