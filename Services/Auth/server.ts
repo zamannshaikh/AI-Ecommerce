@@ -1,9 +1,12 @@
+
 import app from './src/app.js'; // 1. Import using the modern syntax
 import { connectDB } from './src/db/db.js';
+import { connectToRabbitMQ } from './src/utils/rabbitmq.js';
 
 const PORT = 3000;
 
 connectDB();
+connectToRabbitMQ();
 
 
 app.get('/', (req, res) => {

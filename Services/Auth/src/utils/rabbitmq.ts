@@ -3,42 +3,29 @@ import amqplib from 'amqplib';
 
 let connection: any = null;
 let channel: any = null;
-let connectingPromise: Promise<void> | null = null;
 
 
 export const connectToRabbitMQ = async (): Promise<void> => {
-    // 1. If fully connected, just return.
     if (connection && channel) return;
 
-    // 2. If a connection is ALREADY in progress, return that existing promise.
-    // This prevents the "Double Connect" issue you are seeing.
-    if (connectingPromise) {
-        console.log("⚠️ Connection already in progress, waiting for it...");
-        return connectingPromise;
+    try {
+        console.log("⏳ Connecting to RabbitMQ...");
+        
+        connection = await amqplib.connect(process.env.RABBIT_URL as string);
+        console.log("✅ Connected to RabbitMQ successfully");
+
+        channel = await connection.createChannel();
+
+        connection.on("close", () => {
+            console.error("❌ RabbitMQ connection closed");
+            connection = null;
+            channel = null;
+        });
+
+    } catch (error) {
+        console.error("❌ Error connecting to RabbitMQ:", error);
+        throw error; 
     }
-
-    // 3. Start a new connection and store the promise
-    connectingPromise = (async () => {
-        try {
-            console.log("⏳ Connecting to RabbitMQ...");
-            connection = await amqplib.connect(process.env.RABBIT_URL as string);
-            channel = await connection.createChannel();
-            console.log("✅ Connected to RabbitMQ successfully");
-
-            connection.on("close", () => {
-                console.error("❌ RabbitMQ connection closed");
-                connection = null;
-                channel = null;
-                connectingPromise = null;
-            });
-        } catch (error) {
-            console.error("❌ Error connecting to RabbitMQ:", error);
-            connectingPromise = null; // Reset on failure so we can try again
-            throw error;
-        }
-    })();
-
-    return connectingPromise;
 };
 
 

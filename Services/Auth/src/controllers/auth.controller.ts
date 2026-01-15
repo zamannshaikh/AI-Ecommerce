@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import redis from "../db/redis.js";
+import { publishToQueue } from "../utils/rabbitmq.js";
 
 export interface AuthRequest extends Request {
   user?: string | JwtPayload; 
@@ -47,6 +48,14 @@ async function registerUser(req: Request, res: Response) {
         })
 
         await user.save();
+
+        // Publish user registration event to RabbitMQ
+        await publishToQueue("user_registration", {
+            userId: user._id,
+            email: user.email,
+            username: user.username,
+            fullName: user.fullname,
+        });
 
         res.status(201).json({ message: "User registered successfully" });
     } catch (error) {
