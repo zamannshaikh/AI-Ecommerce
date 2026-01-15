@@ -2,10 +2,12 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth.middleware.js'; // Assuming you have this
 import { orderModel } from "../models/order.model.js";
 import axios from 'axios';
+import { publishToQueue } from "../utils/rabbitmq.js";
 
 export const createOrder = async (req: AuthRequest, res: Response) => {
     try {
         const userId = (req.user as any).id; 
+        console.log("Creating order for email:", (req.user as any)?.email);
         const { items, shippingAddress } = req.body;
         const productServiceUrl = process.env.PRODUCT_SERVICE_URL || 'http://localhost:3001';
         console.log(productServiceUrl);
@@ -46,10 +48,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
                 return res.status(500).json({ message: "Error contacting Product Service" });
             }
         }
-        console.log("----- DEBUGGING ORDER -----");
-console.log("1. Item from Request:", items[0]);
-console.log("2. Product from Service:", finalOrderItems[0]); 
-console.log("---------------------------");
+         
         // 3. Create Order in DB
         const newOrder = await orderModel.create({
             userId,
@@ -64,6 +63,12 @@ console.log("---------------------------");
             orderId: newOrder._id,
             order: newOrder 
         });
+           await publishToQueue("order_notifications", {
+        type: "ORDER_CONFIRMATION",
+        email: (req.user as any)?.email,
+        orderId: newOrder._id,
+        amount: totalAmount
+    });
 
     } catch (error: any) {
         res.status(500).json({ message: "Server Error", error: error.message });

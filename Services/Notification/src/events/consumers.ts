@@ -53,6 +53,7 @@ export const startConsumers = async () => {
         });
     });
 
-    // --- LISTENER 2: Order Created (Example for later) ---
-    // await subscribeToQueue("order_created", async (data: any) => { ... });
+   await subscribeToQueue("order_notifications", async (data: any) => {
+        console.log("📨 Received Email Notification Event:", data);
+   });
 };
