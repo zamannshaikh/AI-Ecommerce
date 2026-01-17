@@ -7,6 +7,9 @@ import {registerUserValidator, validateLogin} from '../middleware/validator.midd
 
 const router = express.Router();
 
+router.get('/health', (req, res) => {
+    res.send('Auth Service is running');
+});
 
 
 router.post('/register',registerUserValidator, registerUser);
